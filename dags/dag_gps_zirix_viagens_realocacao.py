@@ -22,7 +22,7 @@ def check_failed_endpoints(context=None):
     client = bigquery.Client()
     query = """
         SELECT api, endpoint, last_extraction
-        FROM `ro-areatecnica.zirix_raw.control_table`
+        FROM `ro-areatecnica.zirix_raw.control_table_viagens_realocacao`
         WHERE status = 'failed'
         AND TIMESTAMP_DIFF(CURRENT_TIMESTAMP(), last_extraction, MINUTE) <= 1
         ORDER BY last_extraction DESC
@@ -51,7 +51,7 @@ def check_failed_endpoints(context=None):
         }
         context['execution_date'] = datetime.now(TZ)
 
-        subject = "FALHA NA TABELA DE CONTROLE DA ZIRIX REGISTROS"
+        subject = "FALHA NA TABELA DE CONTROLE VIAGENS DE REALOCACAO DA ZIRIX"
         body = f"""
         <p>Foram encontradas falhas na tabela de controle:</p>
         <ul>
@@ -69,7 +69,7 @@ def check_failed_endpoints(context=None):
 
 def run_cf():
     request = google.auth.transport.requests.Request()
-    audience = 'https://us-central1-ro-areatecnica.cloudfunctions.net/cf_gps_zirix_data'
+    audience = 'https://us-central1-ro-areatecnica.cloudfunctions.net/cf-gps-zirix-viagens-realocacao'
     token = google.oauth2.id_token.fetch_id_token(request, audience)
     response = requests.post(
         audience,
@@ -88,17 +88,17 @@ default_args = {
     "email_on_failure": False,
     "email_on_retry": False,
     "execution_timeout": timedelta(seconds=300),
-    "retries": 3,
+    "retries": 1,
     "retry_delay": 0,
 }
 
 with DAG(
-        dag_id="dag_zirix_data",
+        dag_id="dag_zirix_data_realocacao",
         default_args=default_args,
-        description="Dag que aciona a Cloud Functions cf_gps_zirix_data e notifica em caso de falha por email.",
-        schedule_interval="*/5 * * * *",
+        description="Dag que aciona a Cloud Functions cf-gps-zirix-viagens-realocacao e notifica em caso de falha por email.",
+        schedule_interval=timedelta(hours=1),
         catchup=False,
-        tags=["zirix"],
+        tags=["zirix_realocacao"],
 ) as dag:
     verify_failed_task = PythonOperator(
         task_id="verify_failed_endpoints",

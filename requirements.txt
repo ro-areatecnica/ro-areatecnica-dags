@@ -1,8 +1,9 @@
 pendulum==3.0.0
 apache-airflow==apache-airflow
+apache-airflow[google]
 requests==2.32.3
 google-auth==2.35.0
-google-cloud-secret-manager==2.21.0
+google-cloud-bigquery
 google-api-core==2.11.0
 google-auth-httplib2==0.1.0
 google-auth-oauthlib==0.4.6
