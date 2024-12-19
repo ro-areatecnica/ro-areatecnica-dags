@@ -1,11 +1,9 @@
 import pendulum
-import logging
 from datetime import datetime
 from airflow import DAG
 from airflow.providers.google.cloud.operators.dataproc import DataprocSubmitJobOperator
 from airflow.operators.email import EmailOperator
 
-logger = logging.getLogger(__name__)
 
 TZ = pendulum.timezone("America/Sao_Paulo")
 
@@ -23,8 +21,6 @@ default_args = {
     "owner": "ro-areatecnica",
     "depends_on_past": False,
     "start_date": datetime(2024, 12, 18, tzinfo=TZ),
-    "email_on_failure": False,
-    "email_on_retry": False,
     "retries": 0,
     "retry_delay": 0,
 }
@@ -38,7 +34,6 @@ with DAG(
     tags=["segmento_shape"],
 ) as dag:
 
-    # Submissão do Job Spark ao Dataproc
     submit_dataproc_job = DataprocSubmitJobOperator(
         task_id="submit_dataproc_job",
         project_id=PROJECT_ID,
@@ -61,14 +56,12 @@ with DAG(
         },
     )
 
-    # Envio de Alerta por E-mail em caso de Falha
     email_on_failure = EmailOperator(
         task_id="send_email_on_failure",
-        to="raphael.miranda@rioonibus.com",
+        to=["raphael.miranda@rioonibus.com", "alex.perfeito@rioonibus.com ", "miguel.dias@rioonibus.com"],
         subject="Falha no Job Dataproc",
         html_content="<h3>O processamento no Dataproc falhou. Verifique os logs no Airflow e no Dataproc.</h3>",
-        trigger_rule="one_failed",  # Garante execução apenas se a tarefa anterior falhar
+        trigger_rule="one_failed",
     )
 
-    # Fluxo da DAG
     submit_dataproc_job >> email_on_failure
