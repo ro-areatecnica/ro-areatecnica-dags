@@ -10,7 +10,7 @@ from airflow.operators.email import EmailOperator
 TZ = pendulum.timezone("America/Sao_Paulo")
 
 # Constantes
-DAG_ID = "dag_validacao_viagem_smtr"
+DAG_ID = "dag_dataform_validacao_viagem_smtr"
 PROJECT_ID = "ro-areatecnica"
 REPOSITORY_ID = "validacao_viagem_smtr"
 REGION = "us-central1"
