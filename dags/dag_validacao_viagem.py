@@ -2,6 +2,10 @@ import pendulum
 from datetime import datetime
 from airflow import DAG
 from airflow.providers.google.cloud.operators.dataproc import DataprocSubmitJobOperator
+from airflow.providers.google.cloud.operators.dataform import (
+    DataformCreateCompilationResultOperator,
+    DataformCreateWorkflowInvocationOperator,
+)
 from airflow.operators.email import EmailOperator
 
 
@@ -9,13 +13,18 @@ TZ = pendulum.timezone("America/Sao_Paulo")
 
 PROJECT_ID = "ro-areatecnica"
 REGION = "us-central1"
+
+REPOSITORY_ID = "validacao_viagem_smtr"
+GIT_COMMITISH = "main"
+EXECUTION_TAG = "validacao_smtr"
+
 CLUSTER_NAME = "cluster-segmento-shape"
 BQ_DATASET = "planejamento_staging"
 BQ_TABLE_RESULT = "aux_segmento_shape_raw"
 TABLE_INPUT = "aux_shapes_geom_filtrada"
-
 GCS_BUCKET = "segmentacao-shapes-jobs"
 SPARK_JOB_PATH = f"gs://{GCS_BUCKET}/scripts/process_segmentos.py"
+
 
 default_args = {
     "owner": "ro-areatecnica",
@@ -26,13 +35,34 @@ default_args = {
 }
 
 with DAG(
-    dag_id="dag_dataproc_to_bigquery_shapes",
+    dag_id="dag_planejamento_dataproc_dataform",
     default_args=default_args,
-    description="Orquestração do processamento de dados no Dataproc e carga no BigQuery",
+    description="Orquestração do processamento de dados no Dataproc e Dataform com carga no BigQuery",
     schedule_interval=None,
     catchup=False,
-    tags=["segmento_shape"],
+    tags=["viagem_2_0"],
 ) as dag:
+
+    create_compilation_result = DataformCreateCompilationResultOperator(
+        task_id="create_compilation_result",
+        project_id=PROJECT_ID,
+        region=REGION,
+        repository_id=REPOSITORY_ID,
+        compilation_result={"git_commitish": GIT_COMMITISH},
+    )
+
+    create_workflow_invocation = DataformCreateWorkflowInvocationOperator(
+        task_id="create_workflow_invocation",
+        project_id=PROJECT_ID,
+        region=REGION,
+        repository_id=REPOSITORY_ID,
+        workflow_invocation={
+            "compilation_result": "{{ task_instance.xcom_pull('create_compilation_result')['name'] }}",
+            "invocation_config": {
+                "included_tags": [EXECUTION_TAG],
+            },
+        },
+    )
 
     submit_dataproc_job = DataprocSubmitJobOperator(
         task_id="submit_dataproc_job",
@@ -64,4 +94,4 @@ with DAG(
         trigger_rule="one_failed",
     )
 
-    submit_dataproc_job >> email_on_failure
+    create_compilation_result >> create_workflow_invocation >> submit_dataproc_job >> email_on_failure
