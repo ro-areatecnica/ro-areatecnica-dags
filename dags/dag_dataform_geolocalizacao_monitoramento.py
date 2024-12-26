@@ -27,10 +27,10 @@ default_args = {
 
 with models.DAG(
     dag_id=DAG_ID,
-    schedule_interval=None,
+    schedule_interval="0 7 * * *",
     catchup=False,
     default_args=default_args,
-    tags=['validacao_smtr', 'geolocalizacao'],
+    tags=['geolocalizacao', 'monitoramento_viagem'],
 ) as dag:
 
     create_compilation_result = DataformCreateCompilationResultOperator(

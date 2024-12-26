@@ -38,7 +38,7 @@ with DAG(
     dag_id="dag_planejamento_dataproc_dataform",
     default_args=default_args,
     description="Orquestração do processamento de dados no Dataproc e Dataform com carga no BigQuery",
-    schedule_interval=None,
+    schedule_interval="0 6 * * *",
     catchup=False,
     tags=["viagem_2_0"],
 ) as dag:
@@ -51,8 +51,8 @@ with DAG(
         compilation_result={"git_commitish": GIT_COMMITISH},
     )
 
-    create_workflow_invocation = DataformCreateWorkflowInvocationOperator(
-        task_id="create_workflow_invocation",
+    dataform_create_workflow_invocation = DataformCreateWorkflowInvocationOperator(
+        task_id="dataform_create_workflow_invocation",
         project_id=PROJECT_ID,
         region=REGION,
         repository_id=REPOSITORY_ID,
@@ -94,4 +94,4 @@ with DAG(
         trigger_rule="one_failed",
     )
 
-    create_compilation_result >> create_workflow_invocation >> submit_dataproc_job >> email_on_failure
+    create_compilation_result >> dataform_create_workflow_invocation >> submit_dataproc_job >> email_on_failure
